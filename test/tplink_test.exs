@@ -1,8 +1,8 @@
-defmodule TplinkTest do
+defmodule TPLinkTest do
   use ExUnit.Case
-  doctest Tplink
+  doctest TPLink
 
   test "greets the world" do
-    assert Tplink.hello() == :world
+    assert TPLink.hello() == :world
   end
 end

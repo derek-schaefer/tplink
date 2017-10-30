@@ -1,4 +1,4 @@
-# Tplink
+# TPLink
 
 **TODO: Add description**
 

@@ -1,6 +1,6 @@
-defmodule Tplink do
+defmodule TPLink do
   @moduledoc """
-  Documentation for Tplink.
+  Documentation for TPLink.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule Tplink do
 
   ## Examples
 
-      iex> Tplink.hello
+      iex> TPLink.hello
       :world
 
   """

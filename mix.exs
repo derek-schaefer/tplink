@@ -1,10 +1,10 @@
-defmodule Tplink.Mixfile do
+defmodule TPLink.Mixfile do
   use Mix.Project
 
   def project do
     [
       app: :tplink,
-      version: "0.0.0",
+      version: "0.0.1",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
       description: description(),
