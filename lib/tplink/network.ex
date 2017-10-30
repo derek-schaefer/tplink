@@ -2,6 +2,15 @@ defmodule TPLink.Network do
   import Bitwise
 
   @default_key 171
+  @default_port 9999
+
+  def query_udp(address, payload, port \\ @default_port) do
+    {:ok, socket} = :gen_udp.open(0, [:binary, active: false])
+    :ok = :gen_udp.send(socket, address, port, encrypt(payload))
+    {:ok, {_address, _port, response}} = :gen_udp.recv(socket, 0)
+    :ok = :gen_udp.close(socket)
+    decrypt(response)
+  end
 
   def encrypt(payload, key \\ @default_key) do
     payload |> Poison.encode! |> encrypt(key, [])
