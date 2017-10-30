@@ -6,7 +6,7 @@ defmodule TPLink.Network do
 
   def query_udp(address, payload, port \\ @default_port) do
     {:ok, socket} = :gen_udp.open(0, [:binary, active: false])
-    :ok = :gen_udp.send(socket, address, port, encrypt(payload))
+    :ok = :gen_udp.send(socket, normalize_address(address), port, encrypt(payload))
     {:ok, {_address, _port, response}} = :gen_udp.recv(socket, 0)
     :ok = :gen_udp.close(socket)
     decrypt(response)
@@ -32,6 +32,13 @@ defmodule TPLink.Network do
   end
   defp decrypt(<<head, tail::binary>>, key, buffer) do
     decrypt(tail, head, [head ^^^ key | buffer])
+  end
+
+  defp normalize_address(address) when is_binary(address) do
+    String.to_charlist(address)
+  end
+  defp normalize_address(address) do
+    address
   end
 
   defp pack_buffer(buffer) do

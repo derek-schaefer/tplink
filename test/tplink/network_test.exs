@@ -6,7 +6,7 @@ defmodule TPLink.NetworkTest do
   @sysinfo %{"system" => %{"get_sysinfo" => %{}}}
 
   setup do
-    {:ok, address: "TPLINK_ADDRESS" |> System.get_env |> String.to_charlist}
+    {:ok, address: System.get_env("TPLINK_ADDRESS")}
   end
 
   describe "#query_udp" do
