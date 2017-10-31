@@ -1,23 +1,45 @@
 defmodule TPLink.Network do
   import Bitwise
 
-  @default_key 171
+  alias TPLink.Device
+
   @default_port 9999
+  @default_key 171
   @header_size 32
+
+  def broadcast_socket do
+    :gen_udp.open(0, [:binary, active: true, broadcast: true])
+  end
+
+  def broadcast_query(socket, port \\ @default_port) do
+    :gen_udp.send(socket, {255, 255, 255, 255}, port, encrypt(Device.sysinfo_query))
+  end
+
+  def broadcast_close(socket) do
+    :gen_udp.close(socket)
+  end
 
   def query_udp(address, payload, port \\ @default_port) do
     {:ok, socket} = :gen_udp.open(0, [:binary, active: false])
+
     :ok = :gen_udp.send(socket, normalize_address(address), port, encrypt(payload))
+
     {:ok, {_address, _port, response}} = :gen_udp.recv(socket, 0)
+
     :ok = :gen_udp.close(socket)
+
     decrypt(response)
   end
 
   def query_tcp(address, payload, port \\ @default_port) do
     {:ok, socket} = :gen_tcp.connect(normalize_address(address), port, [:binary, active: false])
+
     :ok = :gen_tcp.send(socket, payload |> encrypt |> add_header)
+
     {:ok, response} = :gen_tcp.recv(socket, 0)
+
     :ok = :gen_tcp.close(socket)
+
     response |> remove_header |> decrypt
   end
 

@@ -1,12 +1,21 @@
 defmodule TPLink.NetworkTest do
   use ExUnit.Case
 
-  alias TPLink.Network
+  alias TPLink.{Network, Device}
 
-  @sysinfo %{"system" => %{"get_sysinfo" => %{}}}
+  @sysinfo Device.sysinfo_query
 
   setup do
     {:ok, address: System.get_env("TPLINK_ADDRESS")}
+  end
+
+  describe "#broadcast_socket" do
+  end
+
+  describe "#broadcast_query" do
+  end
+
+  describe "#broadcast_close" do
   end
 
   describe "#query_udp" do
