@@ -2,8 +2,7 @@ defmodule TPLink do
   alias TPLink.{Network, Device}
 
   def device(address) do
-    address
-    |> Network.query_udp(Device.sysinfo_query)
-    |> Device.init
+    with {:ok, payload} <- Network.query_tcp(address, Device.sysinfo_query),
+      do: {:ok, Device.init(payload, address)}
   end
 end

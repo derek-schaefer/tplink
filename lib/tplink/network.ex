@@ -1,46 +1,32 @@
 defmodule TPLink.Network do
   import Bitwise
 
-  alias TPLink.Device
-
   @default_port 9999
-  @default_key 171
+  @default_key 0xAB
   @header_size 32
+  @timeout 5_000
 
-  def broadcast_socket do
-    :gen_udp.open(0, [:binary, active: true, broadcast: true])
-  end
+  def default_port, do: @default_port
 
-  def broadcast_query(socket, port \\ @default_port) do
-    :gen_udp.send(socket, {255, 255, 255, 255}, port, encrypt(Device.sysinfo_query))
-  end
-
-  def broadcast_close(socket) do
-    :gen_udp.close(socket)
-  end
+  def address(value) when is_binary(value), do: String.to_charlist(value)
+  def address(value), do: value
 
   def query_udp(address, payload, port \\ @default_port) do
-    {:ok, socket} = :gen_udp.open(0, [:binary, active: false])
-
-    :ok = :gen_udp.send(socket, normalize_address(address), port, encrypt(payload))
-
-    {:ok, {_address, _port, response}} = :gen_udp.recv(socket, 0)
-
-    :ok = :gen_udp.close(socket)
-
-    decrypt(response)
+    with {:ok, payload} <- encrypt(payload),
+         {:ok, socket} <- :gen_udp.open(0, [:binary, active: false]),
+         :ok <- :gen_udp.send(socket, address(address), port, payload),
+         {:ok, {_address, _port, response}} <- :gen_udp.recv(socket, 0, @timeout),
+         :ok <- :gen_udp.close(socket),
+      do: decrypt(response)
   end
 
   def query_tcp(address, payload, port \\ @default_port) do
-    {:ok, socket} = :gen_tcp.connect(normalize_address(address), port, [:binary, active: false])
-
-    :ok = :gen_tcp.send(socket, payload |> encrypt |> add_header)
-
-    {:ok, response} = :gen_tcp.recv(socket, 0)
-
-    :ok = :gen_tcp.close(socket)
-
-    response |> remove_header |> decrypt
+    with {:ok, payload} <- encrypt(payload),
+         {:ok, socket} <- :gen_tcp.connect(address(address), port, [:binary, active: false], @timeout),
+         :ok <- :gen_tcp.send(socket, add_header(payload)),
+         {:ok, response} <- :gen_tcp.recv(socket, 0, @timeout),
+         :ok <- :gen_tcp.close(socket),
+      do: response |> remove_header |> decrypt
   end
 
   def add_header(payload) do
@@ -52,11 +38,11 @@ defmodule TPLink.Network do
   end
 
   def encrypt(payload, key \\ @default_key) do
-    payload |> Poison.encode! |> encrypt(key, [])
+    with {:ok, payload} <- Poison.encode(payload), do: {:ok, encrypt(payload, key, [])}
   end
 
   def decrypt(payload, key \\ @default_key) do
-    payload |> decrypt(key, []) |> Poison.decode!
+    payload |> decrypt(key, []) |> Poison.decode
   end
 
   defp encrypt(<<>>, _key, buffer) do
@@ -71,13 +57,6 @@ defmodule TPLink.Network do
   end
   defp decrypt(<<head, tail::binary>>, key, buffer) do
     decrypt(tail, head, [head ^^^ key | buffer])
-  end
-
-  defp normalize_address(address) when is_binary(address) do
-    String.to_charlist(address)
-  end
-  defp normalize_address(address) do
-    address
   end
 
   defp pack_buffer(buffer) do
