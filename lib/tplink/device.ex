@@ -1,14 +1,18 @@
 defmodule TPLink.Device do
-  defstruct [:payload]
+  alias TPLink.Network
 
-  def sysinfo_query, do: %{"system" => %{"get_sysinfo" => %{}}}
+  defstruct [:address, :data]
 
-  def init(payload) when is_map(payload) do
-    %__MODULE__{payload: payload}
+  def sysinfo_query do
+    %{"system" => %{"get_sysinfo" => %{}}}
   end
 
-  def sysinfo(%__MODULE__{payload: payload}) do
-    payload["system"]["get_sysinfo"]
+  def init(data, address \\ nil) when is_map(data) do
+    %__MODULE__{data: data, address: Network.address(address)}
+  end
+
+  def sysinfo(%__MODULE__{data: data}) do
+    data["system"]["get_sysinfo"]
   end
 
   def id(%__MODULE__{} = device) do
