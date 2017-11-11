@@ -1,28 +1,16 @@
 defmodule TPLink.DiscoveryService do
   use GenServer
 
-  alias TPLink.{Network, Device}
+  alias TPLink.{DeviceSupervisor, Device, Network}
 
-  @state %{socket: nil, devices: %{}}
+  defstruct socket: nil
 
   #
   # Client
   #
 
-  def start_link(options \\ []) do
-    GenServer.start_link(__MODULE__, @state, options)
-  end
-
-  def devices(pid) do
-    GenServer.call(pid, :devices)
-  end
-
-  def broadcast(pid) do
-    GenServer.cast(pid, :broadcast)
-  end
-
-  def stop(pid) do
-    GenServer.stop(pid)
+  def start_link do
+    GenServer.start_link(__MODULE__, %__MODULE__{}, name: __MODULE__)
   end
 
   #
@@ -30,28 +18,26 @@ defmodule TPLink.DiscoveryService do
   #
 
   def init(state) do
-    {:ok, socket} = Network.broadcast_socket
+    {:ok, socket} = :gen_udp.open(0, [:binary, active: true, broadcast: true])
+
+    :timer.send_interval(30_000, :broadcast)
+
+    send(self(), :broadcast)
 
     {:ok, %{state | socket: socket}}
   end
 
-  def handle_call(:devices, _from, %{devices: devices} = state) do
-    {:reply, devices, state}
-  end
+  def handle_info(:broadcast, state) do
+    {:ok, payload} = Device.sysinfo_query |> Network.encrypt
 
-  def handle_cast(:broadcast, %{socket: socket} = state) do
-    :ok = Network.broadcast_query(socket)
+    :ok = :gen_udp.send(state.socket, {255, 255, 255, 255}, Network.default_port, payload)
 
     {:noreply, state}
   end
 
-  def handle_info({:udp, _socket, address, _port, payload}, %{devices: devices} = state) do
-    device = payload |> Network.decrypt |> Device.init
+  def handle_info({:udp, _socket, address, _port, payload}, state) do
+    {:ok, _pid} = with {:ok, _payload} = Network.decrypt(payload), do: DeviceSupervisor.start_service(address)
 
-    {:noreply, %{state | devices: Map.put(devices, address, device)}}
-  end
-
-  def terminate(_reason, %{socket: socket}) do
-    Network.broadcast_close(socket)
+    {:noreply, state}
   end
 end
